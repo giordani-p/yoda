@@ -1,0 +1,49 @@
+[project]
+name = "backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "fastapi>=0.162.2",
+    "psycopg[binary]>=3.3.8",
+    "pydantic-settings>=2.16.2",
+    "sqlalchemy>=2.1.8",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "import-linter>=2.16",
+    "pytest>=9.2.0",
+    "pyyaml>=6.0.3",
+    "ruff>=0.17.4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "Modules do not import each other"
+type = "independence"
+modules = ["app.modules.*"]
+
+[[tool.importlinter.contracts]]
+name = "core and shared do not depend on modules or api"
+type = "forbidden"
+source_modules = ["app.core", "app.shared"]
+forbidden_modules = ["app.modules", "app.api"]

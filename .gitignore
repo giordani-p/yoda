@@ -1,0 +1,49 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Alembic
+# Keep migration scripts versioned
+
+# Node
+node_modules/
+coverage/
+*.tsbuildinfo
+
+# Build output (Python and Node)
+dist/
+build/
+
+# IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+docker-data/
+
+# Local agent plans (see AGENTS.md)
+.plans/

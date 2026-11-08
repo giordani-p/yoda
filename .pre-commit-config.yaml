@@ -1,0 +1,25 @@
+# Usa as ferramentas já instaladas em cada app (uv e pnpm), sem duplicar versões aqui.
+# Instalação: pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: backend-ruff
+        name: backend ruff
+        entry: bash -c 'cd apps/backend && uv run ruff check --fix . && uv run ruff format .'
+        language: system
+        files: ^apps/backend/
+        pass_filenames: false
+
+      - id: backend-import-linter
+        name: backend module boundaries
+        entry: bash -c 'cd apps/backend && uv run lint-imports'
+        language: system
+        files: ^apps/backend/app/
+        pass_filenames: false
+
+      - id: frontend-lint
+        name: frontend eslint + prettier
+        entry: bash -c 'cd apps/frontend && pnpm lint && pnpm format:check'
+        language: system
+        files: ^apps/frontend/
+        pass_filenames: false
