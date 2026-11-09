@@ -7,7 +7,7 @@ dependencies = [
     "fastapi>=0.162.2",
     "psycopg[binary]>=3.3.8",
     "pydantic-settings>=2.16.2",
-    "sqlalchemy>=2.1.8",
+    "sqlalchemy[asyncio]>=2.1.8",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -16,6 +16,7 @@ package = false
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
     "httpx2>=2.16.0",
     "import-linter>=2.16",
     "pytest>=9.2.0",
@@ -37,10 +38,27 @@ pythonpath = ["."]
 [tool.importlinter]
 root_package = "app"
 
+# Grafo entre módulos (ADR 0004): por padrão nenhum módulo importa outro. As únicas exceções
+# permitidas são as arestas abaixo, e somente para a interface pública (o pacote raiz do
+# módulo). Importar um subpacote interno de outro módulo quebra o contrato.
 [[tool.importlinter.contracts]]
-name = "Modules do not import each other"
+name = "Modules only depend on the allowed public interfaces"
 type = "independence"
 modules = ["app.modules.*"]
+ignore_imports = [
+    "app.modules.assistant.** -> app.modules.context",
+    "app.modules.assistant.** -> app.modules.conversations",
+    "app.modules.context.** -> app.modules.conversations",
+]
+unmatched_ignore_imports_alerting = "none"
+
+# Camadas internas de cada módulo (ADR 0002), por arquivo: um arquivo só importa os que estão
+# abaixo dele. Os parênteses tornam a camada opcional (módulos ainda vazios não quebram).
+[[tool.importlinter.contracts]]
+name = "Module layers"
+type = "layers"
+containers = ["app.modules.*"]
+layers = ["(router)", "(service)", "(repository)", "(models)"]
 
 [[tool.importlinter.contracts]]
 name = "core and shared do not depend on modules or api"

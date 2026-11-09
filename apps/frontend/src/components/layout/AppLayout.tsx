@@ -4,7 +4,7 @@ export function AppLayout() {
   return (
     <>
       <header>
-        <strong>my-project</strong>
+        <strong>Yoda</strong>
       </header>
       <main>
         <Outlet />

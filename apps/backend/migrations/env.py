@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message
 
 # Importa o models.py de todos os módulos. Sem isso, o autogenerate não enxerga as tabelas
 # de um módulo esquecido e gera uma migration que as apaga.
+# O Alembic roda com engine síncrono; a mesma DATABASE_URL (psycopg) serve aos dois modos.
 for module in pkgutil.iter_modules(app.modules.__path__):
     models_path = f"app.modules.{module.name}.models"
     if importlib.util.find_spec(models_path):

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # No Docker o arquivo não existe e as variáveis vêm do docker-compose.
     model_config = SettingsConfigDict(env_file="../../.env", extra="ignore")
 
-    app_name: str = "my-project"
+    app_name: str = "yoda"
     app_env: str = "development"
     app_debug: bool = False
 

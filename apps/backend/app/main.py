@@ -1,13 +1,23 @@
 """Ponto de entrada da aplicação FastAPI."""
 
-from fastapi import FastAPI
+import logging
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
+from app.shared.database import get_db
+
+logger = logging.getLogger(__name__)
 
 
 def _operation_id(route: APIRoute) -> str:
@@ -34,8 +44,17 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix=settings.api_v1_prefix)
 
     @app.get("/health", include_in_schema=False)
-    def health() -> dict[str, str]:
-        return {"status": "ok"}
+    async def health(db: Annotated[AsyncSession, Depends(get_db)]) -> JSONResponse:
+        """Verifica se a aplicação está no ar e consegue falar com o banco."""
+        try:
+            await db.execute(text("SELECT 1"))
+        except SQLAlchemyError:
+            logger.warning("Health check failed: database unavailable", exc_info=True)
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "unavailable"},
+            )
+        return JSONResponse(content={"status": "ok"})
 
     return app
 

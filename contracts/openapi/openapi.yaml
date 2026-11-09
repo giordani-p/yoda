@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: my-project
+  title: yoda
   version: 0.1.0
   description: Source of truth for the HTTP API. Change this file before changing the code.
 
