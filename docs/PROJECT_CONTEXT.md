@@ -90,7 +90,9 @@ reais, sem abstração genérica excessiva.
 ### Segurança e privacidade
 
 - Segredos em variáveis de ambiente; `.env` fora do versionamento.
-- Autenticação e autorização no backend; isolamento de dados por usuário.
+- Autenticação no backend por JWT em cookie HttpOnly, verificado em `app/shared/security/`
+  ([ADR 0006](decisions/0006-authentication.md)); usuários criados só pelo terminal.
+- Isolamento de dados por usuário: rotas protegidas recebem o `user_id` por `CurrentUserId`.
 - Validação de entrada e limite de tamanho das mensagens.
 - Erros sem informações internas; logs sem conteúdo sensível desnecessário.
 - Mensagens e contexto são enviados à OpenAI: a aplicação não deve afirmar que todo o

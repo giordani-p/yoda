@@ -1,4 +1,4 @@
-# Yoda
+# Yoda - May Knowledge be with you!
 
 Assistente pessoal de IA com **Python/FastAPI** no backend, **React/TypeScript** no frontend e a API da OpenAI como mecanismo de inteligência, seguindo **API First** e **monolito modular** organizado por domínios funcionais.
 
@@ -16,7 +16,11 @@ O contexto do produto e as regras de arquitetura estão em [docs/PROJECT_CONTEXT
 make setup     # cria o .env a partir do .env.example
 make install   # instala as dependências do backend e do frontend
 make up        # sobe banco, backend e frontend no Docker
+docker compose exec backend python -m app.modules.users.cli   # cria seu usuário
 ```
+
+Não há cadastro pela interface: os usuários são criados pelo terminal. Fora do Docker, use
+`make create-user`.
 
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000 (documentação interativa em `/docs`)

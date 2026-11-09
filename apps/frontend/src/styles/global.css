@@ -8,3 +8,26 @@ body {
     max-width: 960px;
     padding: 16px;
 }
+
+.app-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.user-menu {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.login {
+    margin: 64px auto;
+    max-width: 320px;
+}
+
+.login form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}

@@ -37,6 +37,8 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
+        # Necessário para o navegador enviar o cookie de sessão a partir do frontend.
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )

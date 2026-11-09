@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter
 
-from app.modules import example
+from app.modules import example, users
 
 api_router = APIRouter()
 api_router.include_router(example.router)
+api_router.include_router(users.router)

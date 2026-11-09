@@ -72,8 +72,108 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Authenticate and start a session
+      description: On success, sets the `yoda_session` HttpOnly cookie with a signed token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "204":
+          description: Authenticated. The session cookie is set.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          description: Invalid email or password (code INVALID_CREDENTIALS).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: End the session
+      description: Clears the session cookie. Succeeds even without a valid session.
+      responses:
+        "204":
+          description: Session cookie cleared.
+
+  /api/v1/users/me:
+    get:
+      tags: [users]
+      operationId: getCurrentUser
+      summary: Get the authenticated user
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: yoda_session
+
+  responses:
+    Unauthenticated:
+      description: Missing, invalid or expired session (code UNAUTHENTICATED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Invalid request (code VALIDATION_ERROR).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
   schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          minLength: 1
+          maxLength: 320
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+
+    User:
+      type: object
+      required: [id, email, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+
     ExampleCreate:
       type: object
       required: [name]
@@ -126,7 +226,9 @@ components:
       properties:
         code:
           type: string
-          description: Stable machine-readable error code, e.g. NOT_FOUND, VALIDATION_ERROR.
+          description: >
+            Stable machine-readable error code: VALIDATION_ERROR, NOT_FOUND, UNAUTHENTICATED,
+            INVALID_CREDENTIALS.
         message:
           type: string
         details:
