@@ -1,6 +1,8 @@
-# my-project
+# Yoda
 
-Template base para novos projetos com **Python/FastAPI** no backend e **React/TypeScript** no frontend, seguindo **API First** e **monolito modular**.
+Assistente pessoal de IA com **Python/FastAPI** no backend, **React/TypeScript** no frontend e a API da OpenAI como mecanismo de inteligência, seguindo **API First** e **monolito modular** organizado por domínios funcionais.
+
+O contexto do produto e as regras de arquitetura estão em [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md); o que já está implementado, em [docs/CURRENT_STATE.md](docs/CURRENT_STATE.md).
 
 ## Pré-requisitos
 
@@ -37,9 +39,10 @@ apps/
   backend/            FastAPI (uv, SQLAlchemy, Alembic, ruff, pytest, import-linter)
     app/
       core/           configuração, logging e erros
-      shared/         infraestrutura técnica comum (banco, schema base)
+      shared/         infraestrutura técnica comum (banco, schema base, segurança)
       api/            só agrega os routers dos módulos
-      modules/        um pacote por módulo de negócio
+      modules/        users, conversations, assistant, context (e example, até o P1)
+        <nome>/       router, schemas, service, repository, models
     migrations/       Alembic
     tests/            espelha app/, inclui o teste de contrato
   frontend/           React + Vite (TanStack Query, React Router, Vitest)
@@ -48,7 +51,7 @@ apps/
       features/       um diretório por funcionalidade, espelhando os módulos
       services/api/   client tipado gerado a partir do contrato
 contracts/openapi/    contrato da API (fonte da verdade)
-docs/                 contexto, estado atual, fases e decisões (ADRs)
+docs/                 contexto, estado atual, fases, decisões (ADRs) e spec arquivada
 ```
 
 As regras de arquitetura estão em [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md).
@@ -64,14 +67,16 @@ O CI falha se o backend divergir do contrato ou se o client gerado estiver desat
 
 ## Criando um novo módulo
 
+Os módulos do produto já existem como esqueletos. Para criar um novo (ou preencher um existente):
+
 1. Descreva os endpoints e schemas no contrato.
-2. Copie `apps/backend/app/modules/example/` para `app/modules/<nome>/` e ajuste.
-3. Registre o router em `app/api/router.py`.
-4. Rode `make migration name=create_<nome>` (os models de todos os módulos são carregados automaticamente).
+2. Siga `apps/backend/app/modules/example/` como referência (`router.py`, `schemas.py`, `service.py`, `repository.py`, `models.py`).
+3. Exporte no `__init__.py` do módulo a interface pública (por exemplo, o `router`) e registre o router em `app/api/router.py`.
+4. Rode `make migration name=create_<nome>` (o `models.py` de todos os módulos é carregado automaticamente).
 5. Crie os testes em `tests/modules/<nome>/`.
 6. No frontend, crie `src/features/<nome>/` seguindo `features/example/`.
 
-Um módulo só pode ser usado por outro através do que ele exporta no próprio `__init__.py`. O `import-linter` bloqueia imports diretos entre módulos.
+Um módulo só pode usar outro através do que ele exporta no próprio `__init__.py`, e apenas nas dependências permitidas pelo [ADR 0004](docs/decisions/0004-module-communication.md). Dentro de cada módulo, um arquivo só importa os que estão abaixo dele (`router` → `service` → `repository` → `models`). O `import-linter` verifica as duas regras.
 
 ## Qualidade
 
@@ -81,8 +86,3 @@ make test      # pytest e vitest
 make format
 pre-commit install   # opcional: roda os linters a cada commit
 ```
-
-## Ao usar este template
-
-- Troque `my-project` pelo nome do projeto (`.env.example`, `contracts/openapi/openapi.yaml`, `apps/backend/app/core/config.py`, `index.html`, `AppLayout.tsx`, este README).
-- Remova o módulo `example` (backend, contrato, migration e feature do frontend) quando o primeiro módulo real existir.

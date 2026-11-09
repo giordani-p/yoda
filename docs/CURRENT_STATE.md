@@ -1,26 +1,38 @@
 # Estado atual
 
-Estado do template base. Atualize este documento a cada entrega que mude o que está implementado.
+Fase concluída: **P0 — Foundation** ([phases/p0.md](phases/p0.md)). Atualize este documento a cada
+entrega que mude o que está implementado.
 
 ## Backend
 
 - FastAPI com configuração por variáveis de ambiente, logging, CORS e envelope de erro padrão.
-- Banco Postgres via SQLAlchemy 2 (síncrono) e Alembic, com uma migration inicial.
-- Módulo `example` com listagem, criação e consulta por id (`/api/v1/examples`).
-- `/health` fora do contrato.
-- Testes: rotas do módulo `example` (SQLite em memória) e teste de contrato.
-- Fronteiras entre módulos verificadas pelo `import-linter`.
+- Postgres via SQLAlchemy 2 **assíncrono** (`AsyncSession`, psycopg 3) e Alembic (síncrono), com
+  uma migration inicial.
+- Módulos `users`, `conversations`, `assistant` e `context` criados apenas com o `__init__.py`
+  (docstring de responsabilidade), sem rotas, models ou regras.
+- `app/shared/security/` criado vazio, reservado para a identificação do usuário autenticado.
+- Módulo `example` com listagem, criação e consulta por id (`/api/v1/examples`);
+  permanece até o primeiro endpoint real do P1.
+- `/health` fora do contrato: `SELECT 1` no banco, responde `200 {"status": "ok"}` ou
+  `503 {"status": "unavailable"}`.
+- Testes assíncronos (SQLite em memória com aiosqlite): rotas do `example`, health check e teste
+  de contrato.
+- `import-linter` verifica: grafo de dependências entre módulos (`assistant → context`,
+  `assistant → conversations`, `context → conversations`, só pela interface pública), ordem
+  `router` → `service` → `repository` → `models` dentro de cada módulo e isolamento de
+  `core`/`shared`.
 
 ## Frontend
 
 - React + Vite + TypeScript, com React Router e TanStack Query.
 - Client tipado gerado a partir do contrato (`openapi-typescript` + `openapi-fetch`).
 - Feature `example` com listagem e cadastro, com um teste de componente.
+- Nome exibido: Yoda.
 
 ## Infraestrutura e qualidade
 
 - `docker-compose.yml` com Postgres, backend (aplica as migrations ao subir) e frontend (nginx).
-  Backend e banco têm healthcheck; cada serviço só sobe quando sua dependência está saudável.
+  Backend e banco têm healthcheck; o do backend depende do banco via `/health`.
 - O Alembic carrega automaticamente o `models.py` de todos os módulos.
 - `Makefile` com comandos de setup, desenvolvimento, testes, lint e contrato.
 - Pre-commit com ruff, import-linter, ESLint e Prettier.
@@ -28,4 +40,5 @@ Estado do template base. Atualize este documento a cada entrega que mude o que e
 
 ## Não implementado
 
-Autenticação, observabilidade, cache, filas e pipeline de deploy.
+Autenticação, conversas e mensagens, integração com a OpenAI (LLM Gateway), streaming SSE,
+interface de chat, observabilidade, cache, filas e pipeline de deploy.
