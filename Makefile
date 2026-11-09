@@ -29,7 +29,7 @@ help:
 	@echo "  make migration name=x - Create a migration from model changes"
 	@echo ""
 	@echo "Quality"
-	@echo "  make test             - Run all tests"
+	@echo "  make test             - Run all tests (starts the database if needed)"
 	@echo "  make lint             - Run all linters and type checks"
 	@echo "  make format           - Format all code"
 	@echo ""
@@ -67,7 +67,7 @@ clean:
 	docker compose down -v --remove-orphans
 
 db:
-	docker compose up -d db
+	docker compose up -d --wait db
 
 dev-backend:
 	$(BACKEND) uv run uvicorn app.main:app --reload
@@ -82,7 +82,7 @@ migration:
 	@test -n "$(name)" || (echo "Usage: make migration name=describe_change" && exit 1)
 	$(BACKEND) uv run alembic revision --autogenerate -m "$(name)"
 
-test:
+test: db
 	$(BACKEND) uv run pytest
 	$(FRONTEND) pnpm test
 

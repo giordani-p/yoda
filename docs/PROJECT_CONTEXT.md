@@ -75,7 +75,10 @@ Regras de domínio:
 - Server-Sent Events (SSE), com tipos de evento padronizados que diferenciam conteúdo, conclusão
   e erro.
 - Persistir apenas a mensagem final consolidada, não cada fragmento.
-- O protocolo SSE é documentado separadamente do OpenAPI.
+- Os eventos SSE fazem parte do contrato OpenAPI: o `data` de cada evento é um
+  `MessageStreamEvent` (união discriminada pelo campo `type`), publicado pelo SSE nativo do
+  FastAPI e gerado como tipo no frontend. A ordem dos eventos e o comportamento em falha ficam na
+  descrição da operação.
 
 ### LLM Gateway
 
@@ -176,7 +179,8 @@ tático sem um problema real que o justifique. `modules/example/` é a referênc
 - PostgreSQL com SQLAlchemy 2 **assíncrono** (`AsyncSession`, driver psycopg 3) na aplicação
   (ADR 0005). O Alembic roda em modo síncrono com a mesma `DATABASE_URL`.
 - Uma única árvore de migrations; o Alembic carrega o `models.py` de todos os módulos.
-- Os testes usam SQLite em memória (aiosqlite); reavaliar no P1.
+- Os testes usam um banco Postgres de teste (`TEST_DATABASE_URL`), criado automaticamente; cada
+  teste roda numa transação desfeita ao final.
 
 ### Health check
 

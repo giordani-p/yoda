@@ -82,7 +82,7 @@ Um módulo só pode usar outro através do que ele exporta no próprio `__init__
 
 ```bash
 make lint      # ruff, import-linter, eslint, prettier, tsc
-make test      # pytest e vitest
+make test      # pytest (sobe o Postgres do Docker) e vitest
 make format
 pre-commit install   # opcional: roda os linters a cada commit
 ```

@@ -16,7 +16,6 @@ package = false
 
 [dependency-groups]
 dev = [
-    "aiosqlite>=0.22.1",
     "httpx2>=2.16.0",
     "import-linter>=2.16",
     "pytest>=9.2.0",

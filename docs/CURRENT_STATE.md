@@ -1,6 +1,7 @@
 # Estado atual
 
-Fase concluída: **P0 — Foundation** ([phases/p0.md](phases/p0.md)). Atualize este documento a cada
+Fase concluída: **P0 — Foundation** ([phases/p0.md](phases/p0.md)). Em andamento: **P1 —
+Conversational Experience** ([phases/p1.md](phases/p1.md)), nenhuma funcionalidade do P1 entregue ainda. Atualize este documento a cada
 entrega que mude o que está implementado.
 
 ## Backend
@@ -15,8 +16,9 @@ entrega que mude o que está implementado.
   permanece até o primeiro endpoint real do P1.
 - `/health` fora do contrato: `SELECT 1` no banco, responde `200 {"status": "ok"}` ou
   `503 {"status": "unavailable"}`.
-- Testes assíncronos (SQLite em memória com aiosqlite): rotas do `example`, health check e teste
-  de contrato.
+- Testes assíncronos num banco Postgres de teste (`TEST_DATABASE_URL`, criado automaticamente);
+  cada teste roda numa transação desfeita ao final. Cobrem as rotas do `example`, o health check
+  e o contrato (este sem banco).
 - `import-linter` verifica: grafo de dependências entre módulos (`assistant → context`,
   `assistant → conversations`, `context → conversations`, só pela interface pública), ordem
   `router` → `service` → `repository` → `models` dentro de cada módulo e isolamento de
@@ -34,9 +36,11 @@ entrega que mude o que está implementado.
 - `docker-compose.yml` com Postgres, backend (aplica as migrations ao subir) e frontend (nginx).
   Backend e banco têm healthcheck; o do backend depende do banco via `/health`.
 - O Alembic carrega automaticamente o `models.py` de todos os módulos.
-- `Makefile` com comandos de setup, desenvolvimento, testes, lint e contrato.
+- `Makefile` com comandos de setup, desenvolvimento, testes, lint e contrato; `make test` sobe o
+  Postgres antes de rodar os testes.
 - Pre-commit com ruff, import-linter, ESLint e Prettier.
-- CI no GitHub Actions: lint, testes, teste de contrato, checagem do client gerado e build.
+- CI no GitHub Actions: lint, testes (com serviço Postgres), teste de contrato, checagem do
+  client gerado e build.
 
 ## Não implementado
 
