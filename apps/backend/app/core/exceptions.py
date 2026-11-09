@@ -39,6 +39,13 @@ class NotFoundError(AppError):
     code = "NOT_FOUND"
 
 
+class InvalidRequestError(AppError):
+    """Entrada inválida detectada fora da validação automática do FastAPI."""
+
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    code = "VALIDATION_ERROR"
+
+
 class UnauthenticatedError(AppError):
     status_code = status.HTTP_401_UNAUTHORIZED
     code = "UNAUTHENTICATED"

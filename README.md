@@ -45,7 +45,7 @@ apps/
       core/           configuração, logging e erros
       shared/         infraestrutura técnica comum (banco, schema base, segurança)
       api/            só agrega os routers dos módulos
-      modules/        users, conversations, assistant, context (e example, até o P1)
+      modules/        users, conversations, assistant, context
         <nome>/       router, schemas, service, repository, models
     migrations/       Alembic
     tests/            espelha app/, inclui o teste de contrato
@@ -74,11 +74,11 @@ O CI falha se o backend divergir do contrato ou se o client gerado estiver desat
 Os módulos do produto já existem como esqueletos. Para criar um novo (ou preencher um existente):
 
 1. Descreva os endpoints e schemas no contrato.
-2. Siga `apps/backend/app/modules/example/` como referência (`router.py`, `schemas.py`, `service.py`, `repository.py`, `models.py`).
+2. Siga `apps/backend/app/modules/conversations/` como referência (`router.py`, `schemas.py`, `service.py`, `repository.py`, `models.py`).
 3. Exporte no `__init__.py` do módulo a interface pública (por exemplo, o `router`) e registre o router em `app/api/router.py`.
 4. Rode `make migration name=create_<nome>` (o `models.py` de todos os módulos é carregado automaticamente).
 5. Crie os testes em `tests/modules/<nome>/`.
-6. No frontend, crie `src/features/<nome>/` seguindo `features/example/`.
+6. No frontend, crie `src/features/<nome>/` seguindo `features/conversations/`.
 
 Um módulo só pode usar outro através do que ele exporta no próprio `__init__.py`, e apenas nas dependências permitidas pelo [ADR 0004](docs/decisions/0004-module-communication.md). Dentro de cada módulo, um arquivo só importa os que estão abaixo dele (`router` → `service` → `repository` → `models`). O `import-linter` verifica as duas regras.
 

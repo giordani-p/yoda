@@ -4,7 +4,11 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { UserMenu } from "@/features/auth/UserMenu";
-import { ExamplesPage } from "@/features/example/ExamplesPage";
+import { ConversationView } from "@/features/conversations/ConversationView";
+import {
+  ConversationsLayout,
+  NoConversationSelected,
+} from "@/features/conversations/ConversationsLayout";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -14,7 +18,15 @@ export const router = createBrowserRouter([
       {
         path: "/",
         element: <AppLayout headerActions={<UserMenu />} />,
-        children: [{ index: true, element: <ExamplesPage /> }],
+        children: [
+          {
+            element: <ConversationsLayout />,
+            children: [
+              { index: true, element: <NoConversationSelected /> },
+              { path: "c/:conversationId", element: <ConversationView /> },
+            ],
+          },
+        ],
       },
     ],
   },

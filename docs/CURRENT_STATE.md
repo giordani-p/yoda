@@ -1,8 +1,8 @@
 # Estado atual
 
 Fase concluída: **P0 — Foundation** ([phases/p0.md](phases/p0.md)). Em andamento: **P1 —
-Conversational Experience** ([phases/p1.md](phases/p1.md)): autenticação entregue; conversas e
-assistente ainda não. Atualize este documento a cada
+Conversational Experience** ([phases/p1.md](phases/p1.md)): autenticação e conversas entregues;
+assistente (envio de mensagens e streaming) ainda não. Atualize este documento a cada
 entrega que mude o que está implementado.
 
 ## Backend
@@ -16,14 +16,19 @@ entrega que mude o que está implementado.
 - Sessão por JWT num cookie HttpOnly `yoda_session` (7 dias, sem refresh), emitido e verificado
   por `app/shared/security/` sem acesso ao banco ([ADR 0006](decisions/0006-authentication.md)).
   CORS com credenciais.
-- Módulos `conversations`, `assistant` e `context` criados apenas com o `__init__.py`, sem rotas,
-  models ou regras.
-- Módulo `example` com listagem, criação e consulta por id (`/api/v1/examples`);
-  permanece até o primeiro endpoint real do P1.
+- Módulo `conversations`: tabelas `conversations` (com exclusão lógica por `deleted_at`) e
+  `messages` (papel, conteúdo, modelo e tokens). Rotas para criar, listar, consultar e excluir
+  conversas e para listar mensagens (`/api/v1/conversations`), todas restritas ao usuário
+  autenticado; conversa excluída ou de outro usuário responde 404. Paginação por cursor opaco
+  (`limit` + `nextCursor`): conversas da mais recente para a mais antiga; mensagens com a página
+  mais recente primeiro, em ordem cronológica. Ainda não existe rota para criar mensagens.
+- Módulos `assistant` e `context` criados apenas com o `__init__.py`, sem rotas, models ou regras.
+- O módulo `example` do template foi removido, com sua migration; o histórico de migrations
+  começa em `create users table`.
 - `/health` fora do contrato: `SELECT 1` no banco, responde `200 {"status": "ok"}` ou
   `503 {"status": "unavailable"}`.
 - Testes assíncronos num banco Postgres de teste (`TEST_DATABASE_URL`, criado automaticamente);
-  cada teste roda numa transação desfeita ao final. Cobrem as rotas do `example` e de `users`,
+  cada teste roda numa transação desfeita ao final. Cobrem as rotas de `users` e `conversations`,
   o cadastro de usuários, a configuração, o health check e o contrato (este sem banco).
 - `import-linter` verifica: grafo de dependências entre módulos (`assistant → context`,
   `assistant → conversations`, `context → conversations`, só pela interface pública), ordem
@@ -36,7 +41,10 @@ entrega que mude o que está implementado.
 - Client tipado gerado a partir do contrato (`openapi-typescript` + `openapi-fetch`).
 - Feature `auth`: tela de login (`/login`), guarda das rotas autenticadas e menu com nome do
   usuário e botão "Sair". Testes de componente do login e da guarda.
-- Feature `example` com listagem e cadastro, atrás do login, com um teste de componente.
+- Feature `conversations`: lista lateral (criar, abrir, excluir com confirmação, carregar mais)
+  e tela da conversa com o histórico e "Carregar mensagens anteriores". Rotas `/` e
+  `/c/:conversationId`, atrás do login. Testes de componente da lista e da tela.
+- Sessão expirada em qualquer chamada (401 `UNAUTHENTICATED`) leva de volta ao login.
 - Nome exibido: Yoda.
 
 ## Infraestrutura e qualidade
@@ -52,5 +60,5 @@ entrega que mude o que está implementado.
 
 ## Não implementado
 
-Conversas e mensagens, integração com a OpenAI (LLM Gateway), streaming SSE,
+Envio de mensagens, integração com a OpenAI (LLM Gateway), streaming SSE,
 interface de chat, observabilidade, cache, filas e pipeline de deploy.

@@ -173,7 +173,7 @@ modules/<nome>/
 Estrutura plana, com a ordem `router` → `service` → `repository` → `models` verificada pelo
 `import-linter` (ADR 0002). Interfaces explícitas (`Protocol`) só onde há integração externa ou
 ponto de extensão: `LLMProvider` em `assistant` e `ContextProvider` em `context`. Não aplicar DDD
-tático sem um problema real que o justifique. `modules/example/` é a referência até o P1.
+tático sem um problema real que o justifique. `modules/conversations/` serve de referência.
 
 
 ### Banco de dados

@@ -5,73 +5,6 @@ info:
   description: Source of truth for the HTTP API. Change this file before changing the code.
 
 paths:
-  /api/v1/examples:
-    get:
-      tags: [examples]
-      operationId: listExamples
-      summary: List examples
-      responses:
-        "200":
-          description: Examples found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExampleList"
-    post:
-      tags: [examples]
-      operationId: createExample
-      summary: Create an example
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ExampleCreate"
-      responses:
-        "201":
-          description: Example created.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Example"
-        "422":
-          description: Invalid request.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /api/v1/examples/{exampleId}:
-    get:
-      tags: [examples]
-      operationId: getExample
-      summary: Get an example by id
-      parameters:
-        - name: exampleId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Example found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Example"
-        "404":
-          description: Example not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "422":
-          description: Invalid request.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
   /api/v1/auth/login:
     post:
       tags: [auth]
@@ -127,6 +60,112 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthenticated"
 
+  /api/v1/conversations:
+    post:
+      tags: [conversations]
+      operationId: createConversation
+      summary: Create an empty conversation
+      description: The title is filled from the first message sent to the conversation.
+      security:
+        - sessionCookie: []
+      responses:
+        "201":
+          description: Conversation created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    get:
+      tags: [conversations]
+      operationId: listConversations
+      summary: List conversations, most recently updated first
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of conversations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/conversations/{conversationId}:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    get:
+      tags: [conversations]
+      operationId: getConversation
+      summary: Get a conversation
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Conversation found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [conversations]
+      operationId: deleteConversation
+      summary: Delete a conversation
+      description: Soft delete. The conversation stops being listed and returns 404 everywhere.
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Conversation deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/conversations/{conversationId}/messages:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    get:
+      tags: [conversations]
+      operationId: listMessages
+      summary: List messages of a conversation
+      description: >
+        Returns the most recent messages in chronological order. `nextCursor` points to older
+        messages; pass it as `cursor` to load the previous page.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -134,9 +173,40 @@ components:
       in: cookie
       name: yoda_session
 
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor returned as `nextCursor` by the previous page.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
   responses:
     Unauthenticated:
       description: Missing, invalid or expired session (code UNAUTHENTICATED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ConversationNotFound:
+      description: Conversation not found, deleted or owned by another user (code NOT_FOUND).
       content:
         application/json:
           schema:
@@ -174,44 +244,66 @@ components:
         name:
           type: string
 
-    ExampleCreate:
+    Conversation:
       type: object
-      required: [name]
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        description:
-          anyOf:
-            - type: string
-              maxLength: 500
-            - type: "null"
-
-    Example:
-      type: object
-      required: [id, name, description, createdAt]
+      required: [id, title, createdAt, updatedAt]
       properties:
         id:
-          type: integer
-        name:
           type: string
-        description:
+          format: uuid
+        title:
+          description: First ~60 characters of the first message; null until a message is sent.
           anyOf:
             - type: string
             - type: "null"
         createdAt:
           type: string
           format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
-    ExampleList:
+    ConversationPage:
       type: object
-      required: [items]
+      required: [items, nextCursor]
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/Example"
+            $ref: "#/components/schemas/Conversation"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+
+    Message:
+      type: object
+      required: [id, role, content, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessagePage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
 
     ErrorResponse:
       type: object

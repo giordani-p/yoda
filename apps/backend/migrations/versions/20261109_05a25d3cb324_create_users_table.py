@@ -1,7 +1,7 @@
 """create users table
 
 Revision ID: 05a25d3cb324
-Revises: 3d1844d39890
+Revises:
 Create Date: 2026-11-09 19:26:50.723970
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "05a25d3cb324"
-down_revision: str | Sequence[str] | None = "3d1844d39890"
+down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
