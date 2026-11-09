@@ -59,7 +59,30 @@ body {
     padding: 0;
 }
 
-.message p {
+.message-text {
     margin-top: 4px;
     white-space: pre-wrap;
+}
+
+.message-markdown pre {
+    overflow-x: auto;
+}
+
+.composer {
+    align-items: flex-end;
+    display: flex;
+    gap: 8px;
+}
+
+.composer textarea {
+    flex: 1;
+    font: inherit;
+}
+
+.visually-hidden {
+    clip: rect(0 0 0 0);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
 }

@@ -166,6 +166,49 @@ paths:
         "422":
           $ref: "#/components/responses/ValidationError"
 
+  /api/v1/conversations/{conversationId}/messages/stream:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    post:
+      tags: [assistant]
+      operationId: sendMessage
+      summary: Send a message and stream the assistant reply (SSE)
+      description: >
+        Errors before the stream starts (401, 404, 422) are regular JSON responses. Once the
+        stream starts, each event's `data` is a JSON `MessageStreamEvent`, in this order:
+        `message.user`, zero or more `message.delta`, then `message.completed` or
+        `message.error`. The assistant reply is persisted only when completed; if the client
+        disconnects or the generation fails, the partial reply is discarded and the user message
+        is kept.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "200":
+          description: Server-Sent Events stream.
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: string
+                    contentMediaType: application/json
+                    contentSchema:
+                      $ref: "#/components/schemas/MessageStreamEvent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -305,6 +348,74 @@ components:
             - type: string
             - type: "null"
 
+    SendMessageRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Must contain at least one non-whitespace character.
+
+    MessageStreamEvent:
+      oneOf:
+        - $ref: "#/components/schemas/UserMessageEvent"
+        - $ref: "#/components/schemas/MessageDeltaEvent"
+        - $ref: "#/components/schemas/MessageCompletedEvent"
+        - $ref: "#/components/schemas/MessageErrorEvent"
+      discriminator:
+        propertyName: type
+        mapping:
+          message.user: "#/components/schemas/UserMessageEvent"
+          message.delta: "#/components/schemas/MessageDeltaEvent"
+          message.completed: "#/components/schemas/MessageCompletedEvent"
+          message.error: "#/components/schemas/MessageErrorEvent"
+
+    UserMessageEvent:
+      type: object
+      description: The user message was persisted.
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          const: message.user
+        message:
+          $ref: "#/components/schemas/Message"
+
+    MessageDeltaEvent:
+      type: object
+      description: A fragment of the assistant reply.
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: message.delta
+        text:
+          type: string
+
+    MessageCompletedEvent:
+      type: object
+      description: The assistant reply finished and was persisted.
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          const: message.completed
+        message:
+          $ref: "#/components/schemas/Message"
+
+    MessageErrorEvent:
+      type: object
+      description: The generation failed. Nothing from the reply was persisted.
+      required: [type, error]
+      properties:
+        type:
+          type: string
+          const: message.error
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+
     ErrorResponse:
       type: object
       required: [error]
@@ -320,7 +431,7 @@ components:
           type: string
           description: >
             Stable machine-readable error code: VALIDATION_ERROR, NOT_FOUND, UNAUTHENTICATED,
-            INVALID_CREDENTIALS.
+            INVALID_CREDENTIALS, LLM_PROVIDER_ERROR, INTERNAL_ERROR.
         message:
           type: string
         details:

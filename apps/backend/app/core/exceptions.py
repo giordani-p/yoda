@@ -65,7 +65,8 @@ async def _handle_validation_error(_: Request, exc: RequestValidationError) -> J
         status.HTTP_422_UNPROCESSABLE_CONTENT,
         "VALIDATION_ERROR",
         "Invalid request.",
-        exc.errors(),
+        # Validadores próprios incluem a exceção original em `ctx`; ela vira texto no JSON.
+        jsonable_encoder(exc.errors(), custom_encoder={Exception: str}),
     )
 
 

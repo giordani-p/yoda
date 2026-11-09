@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.conversations.models import ConversationRecord
 from app.modules.users.models import UserRecord
-from tests.modules.conversations.conftest import add_messages, login_as
+from tests.helpers import login_as
+from tests.modules.conversations.conftest import add_messages
 
 pytestmark = pytest.mark.anyio
 

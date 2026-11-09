@@ -1,8 +1,8 @@
 # Estado atual
 
 Fase concluída: **P0 — Foundation** ([phases/p0.md](phases/p0.md)). Em andamento: **P1 —
-Conversational Experience** ([phases/p1.md](phases/p1.md)): autenticação e conversas entregues;
-assistente (envio de mensagens e streaming) ainda não. Atualize este documento a cada
+Conversational Experience** ([phases/p1.md](phases/p1.md)): autenticação, conversas e assistente
+com streaming entregues; falta o fechamento da fase (teste ponta a ponta com a OpenAI). Atualize este documento a cada
 entrega que mude o que está implementado.
 
 ## Backend
@@ -21,14 +21,23 @@ entrega que mude o que está implementado.
   conversas e para listar mensagens (`/api/v1/conversations`), todas restritas ao usuário
   autenticado; conversa excluída ou de outro usuário responde 404. Paginação por cursor opaco
   (`limit` + `nextCursor`): conversas da mais recente para a mais antiga; mensagens com a página
-  mais recente primeiro, em ordem cronológica. Ainda não existe rota para criar mensagens.
-- Módulos `assistant` e `context` criados apenas com o `__init__.py`, sem rotas, models ou regras.
+  mais recente primeiro, em ordem cronológica. A interface pública grava as mensagens do
+  usuário e do assistente (a primeira mensagem define o título, com até 60 caracteres) e lê as
+  mensagens recentes.
+- Módulo `context`: `ContextProvider` com instruções do sistema versionadas
+  (`instructions/v1.md`, pt-BR) e as últimas 20 mensagens (`CONTEXT_RECENT_MESSAGES`).
+- Módulo `assistant`: `POST /api/v1/conversations/{conversationId}/messages/stream` com SSE
+  ([ADR 0007](decisions/0007-streaming-protocol.md)) e LLM Gateway com a Responses API da
+  OpenAI, `store=false`, modelo `gpt-6-luna` em desenvolvimento
+  ([ADR 0008](decisions/0008-llm-gateway.md)). A resposta só é gravada quando concluída, com
+  modelo e tokens; falha ou desconexão descarta o parcial. Tempos e tokens em log, sem conteúdo.
 - O módulo `example` do template foi removido, com sua migration; o histórico de migrations
   começa em `create users table`.
 - `/health` fora do contrato: `SELECT 1` no banco, responde `200 {"status": "ok"}` ou
   `503 {"status": "unavailable"}`.
 - Testes assíncronos num banco Postgres de teste (`TEST_DATABASE_URL`, criado automaticamente);
-  cada teste roda numa transação desfeita ao final. Cobrem as rotas de `users` e `conversations`,
+  cada teste roda numa transação desfeita ao final. Cobrem as rotas de `users`, `conversations` e `assistant` (com provedor de LLM falso), o
+  `OpenAIProvider` (com cliente simulado),
   o cadastro de usuários, a configuração, o health check e o contrato (este sem banco).
 - `import-linter` verifica: grafo de dependências entre módulos (`assistant → context`,
   `assistant → conversations`, `context → conversations`, só pela interface pública), ordem
@@ -44,6 +53,10 @@ entrega que mude o que está implementado.
 - Feature `conversations`: lista lateral (criar, abrir, excluir com confirmação, carregar mais)
   e tela da conversa com o histórico e "Carregar mensagens anteriores". Rotas `/` e
   `/c/:conversationId`, atrás do login. Testes de componente da lista e da tela.
+- Feature `assistant`: tela do chat com histórico, resposta ao vivo por streaming, Markdown
+  nas respostas (`react-markdown` + `remark-gfm`, sem HTML bruto), botão "Parar" e avisos de
+  falha ou interrupção (o parcial fica visível até recarregar, sem ser salvo). Testes do leitor
+  de stream, do campo de mensagem, do Markdown e do fluxo do chat.
 - Sessão expirada em qualquer chamada (401 `UNAUTHENTICATED`) leva de volta ao login.
 - Nome exibido: Yoda.
 
@@ -60,5 +73,4 @@ entrega que mude o que está implementado.
 
 ## Não implementado
 
-Envio de mensagens, integração com a OpenAI (LLM Gateway), streaming SSE,
-interface de chat, observabilidade, cache, filas e pipeline de deploy.
+Orçamento de tokens e resumo da conversa (P2), observabilidade, cache, filas e pipeline de deploy.

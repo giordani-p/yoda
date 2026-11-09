@@ -1,11 +1,46 @@
 """Regras de negócio do módulo: ciclo de vida das conversas e leitura do histórico."""
 
+import re
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
 from app.core.exceptions import NotFoundError
 from app.modules.conversations.models import ConversationRecord, MessageRecord
 from app.modules.conversations.pagination import Cursor, Page
 from app.modules.conversations.repository import ConversationRepository
+
+TITLE_MAX_LENGTH = 60
+
+Role = Literal["user", "assistant"]
+
+
+@dataclass(frozen=True)
+class StoredMessage:
+    """Mensagem persistida, como exposta a outros módulos (sem detalhes de persistência)."""
+
+    id: UUID
+    role: Role
+    content: str
+    created_at: datetime
+
+
+def _to_stored(record: MessageRecord) -> StoredMessage:
+    return StoredMessage(
+        id=record.id,
+        role=record.role,  # type: ignore[arg-type]
+        content=record.content,
+        created_at=record.created_at,
+    )
+
+
+def title_from_message(content: str) -> str:
+    """Título da conversa: início da primeira mensagem, em uma linha, com até 60 caracteres."""
+    single_line = re.sub(r"\s+", " ", content).strip()
+    if len(single_line) <= TITLE_MAX_LENGTH:
+        return single_line
+    return single_line[: TITLE_MAX_LENGTH - 1].rstrip() + "…"
 
 
 class ConversationNotFoundError(NotFoundError):
@@ -55,6 +90,62 @@ class ConversationService:
         oldest = newest_first[-1] if newest_first else None
         next_cursor = Cursor(oldest.created_at, oldest.id).encode() if has_more and oldest else None
         return Page(items=list(reversed(newest_first)), next_cursor=next_cursor)
+
+    async def add_user_message(
+        self, user_id: UUID, conversation_id: UUID, content: str
+    ) -> StoredMessage:
+        """Grava a mensagem do usuário. A primeira mensagem define o título da conversa."""
+        conversation = await self.get_conversation(user_id, conversation_id)
+        record = await self.repository.add_message(
+            conversation,
+            MessageRecord(
+                conversation_id=conversation_id,
+                role="user",
+                content=content,
+                created_at=datetime.now(UTC),
+            ),
+            title=title_from_message(content),
+        )
+        return _to_stored(record)
+
+    async def add_assistant_message(
+        self,
+        user_id: UUID,
+        conversation_id: UUID,
+        content: str,
+        model: str,
+        input_tokens: int | None,
+        output_tokens: int | None,
+    ) -> StoredMessage:
+        """Grava a resposta concluída do assistente, com os metadados da geração."""
+        conversation = await self.get_conversation(user_id, conversation_id)
+        record = await self.repository.add_message(
+            conversation,
+            MessageRecord(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=content,
+                model=model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                created_at=datetime.now(UTC),
+            ),
+            title=None,
+        )
+        return _to_stored(record)
+
+    async def recent_messages(
+        self, user_id: UUID, conversation_id: UUID, limit: int
+    ) -> list[StoredMessage]:
+        """Últimas `limit` mensagens da conversa, em ordem cronológica.
+
+        Encerra a transação de leitura ao final, pois é chamado antes da geração da resposta.
+        """
+        await self.get_conversation(user_id, conversation_id)
+        records = await self.repository.list_messages(conversation_id, None, limit)
+        messages = [_to_stored(record) for record in reversed(records)]
+        await self.repository.end_read()
+        return messages
 
 
 def _decode(cursor: str | None) -> Cursor | None:

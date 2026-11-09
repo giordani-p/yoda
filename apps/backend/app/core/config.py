@@ -30,6 +30,17 @@ class Settings(BaseSettings):
     # True quando a aplicação for servida por HTTPS.
     auth_cookie_secure: bool = False
 
+    # Sem chave, a aplicação sobe normalmente e o envio de mensagens responde com erro.
+    openai_api_key: str = ""
+    openai_model: str = "gpt-6-luna"
+    # none, low, medium, high, xhigh ou max. Menos esforço = primeira palavra chega mais rápido.
+    openai_reasoning_effort: str = "low"
+    openai_max_output_tokens: int = 4096
+    openai_timeout_seconds: float = 60.0
+
+    # Quantas mensagens recentes da conversa entram no contexto enviado ao modelo.
+    context_recent_messages: int = 20
+
     @model_validator(mode="after")
     def _check_auth_secret_key(self) -> Self:
         if len(self.auth_secret_key) < MIN_AUTH_SECRET_KEY_LENGTH:

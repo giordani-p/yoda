@@ -14,7 +14,9 @@ from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
 from app.main import app
+from app.modules.users.models import UserRecord
 from app.shared.database import Base, get_db
+from tests.helpers import create_user, login_as
 
 
 class DatabaseTestSettings(BaseSettings):
@@ -71,3 +73,20 @@ async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+async def owner(db_session: AsyncSession) -> UserRecord:
+    return await create_user(db_session, "owner@example.com")
+
+
+@pytest.fixture
+async def other_user(db_session: AsyncSession) -> UserRecord:
+    return await create_user(db_session, "other@example.com")
+
+
+@pytest.fixture
+def owner_client(client: AsyncClient, owner: UserRecord) -> AsyncClient:
+    """Client autenticado como `owner`."""
+    login_as(client, owner)
+    return client

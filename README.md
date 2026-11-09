@@ -22,6 +22,9 @@ docker compose exec backend python -m app.modules.users.cli   # cria seu usuári
 Não há cadastro pela interface: os usuários são criados pelo terminal. Fora do Docker, use
 `make create-user`.
 
+Para o assistente responder, preencha `OPENAI_API_KEY` no `.env` (e reinicie com `make up`).
+As mensagens enviadas são processadas pela OpenAI.
+
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8000 (documentação interativa em `/docs`)
 

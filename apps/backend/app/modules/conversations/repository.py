@@ -47,6 +47,26 @@ class ConversationRepository:
         ).limit(limit)
         return list(await self.session.scalars(query))
 
+    async def add_message(
+        self, conversation: ConversationRecord, message: MessageRecord, title: str | None
+    ) -> MessageRecord:
+        """Grava a mensagem e atualiza a conversa (data de atualização e, se vazio, o título)."""
+        self.session.add(message)
+        conversation.updated_at = message.created_at
+        if conversation.title is None and title is not None:
+            conversation.title = title
+        await self.session.commit()
+        await self.session.refresh(message)
+        return message
+
+    async def end_read(self) -> None:
+        """Encerra a transação de leitura, devolvendo a conexão ao pool.
+
+        Usado antes de operações longas (como a geração da resposta) para não manter uma
+        transação aberta durante todo o streaming.
+        """
+        await self.session.commit()
+
     async def soft_delete(self, record: ConversationRecord) -> None:
         record.deleted_at = datetime.now(UTC)
         await self.session.commit()

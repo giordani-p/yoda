@@ -75,6 +75,7 @@ Regras de domínio:
 - Server-Sent Events (SSE), com tipos de evento padronizados que diferenciam conteúdo, conclusão
   e erro.
 - Persistir apenas a mensagem final consolidada, não cada fragmento.
+- Detalhes em [ADR 0007](decisions/0007-streaming-protocol.md).
 - Os eventos SSE fazem parte do contrato OpenAPI: o `data` de cada evento é um
   `MessageStreamEvent` (união discriminada pelo campo `type`), publicado pelo SSE nativo do
   FastAPI e gerado como tipo no frontend. A ordem dos eventos e o comportamento em falha ficam na
@@ -82,8 +83,8 @@ Regras de domínio:
 
 ### LLM Gateway
 
-O acesso à OpenAI fica isolado em uma integração (`LLMProvider`, em `assistant`), que encapsula o
-SDK oficial, centraliza a escolha do modelo, timeouts, erros, streaming, metadados operacionais e
+O acesso à OpenAI fica isolado em uma integração (`LLMProvider`, em `assistant`;
+[ADR 0008](decisions/0008-llm-gateway.md)), que encapsula o SDK oficial, centraliza a escolha do modelo, timeouts, erros, streaming, metadados operacionais e
 uso de tokens. Nenhum outro ponto do código chama a OpenAI. A interface reflete os casos de uso
 reais, sem abstração genérica excessiva.
 

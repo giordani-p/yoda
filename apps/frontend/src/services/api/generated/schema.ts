@@ -127,6 +127,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations/{conversationId}/messages/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a message and stream the assistant reply (SSE)
+         * @description Errors before the stream starts (401, 404, 422) are regular JSON responses. Once the stream starts, each event's `data` is a JSON `MessageStreamEvent`, in this order: `message.user`, zero or more `message.delta`, then `message.completed` or `message.error`. The assistant reply is persisted only when completed; if the client disconnects or the generation fails, the partial reply is discarded and the user message is kept.
+         */
+        post: operations["sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -168,11 +190,52 @@ export interface components {
             items: components["schemas"]["Message"][];
             nextCursor: string | null;
         };
+        SendMessageRequest: {
+            /** @description Must contain at least one non-whitespace character. */
+            content: string;
+        };
+        MessageStreamEvent: components["schemas"]["UserMessageEvent"] | components["schemas"]["MessageDeltaEvent"] | components["schemas"]["MessageCompletedEvent"] | components["schemas"]["MessageErrorEvent"];
+        /** @description The user message was persisted. */
+        UserMessageEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.user";
+            message: components["schemas"]["Message"];
+        };
+        /** @description A fragment of the assistant reply. */
+        MessageDeltaEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.delta";
+            text: string;
+        };
+        /** @description The assistant reply finished and was persisted. */
+        MessageCompletedEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.completed";
+            message: components["schemas"]["Message"];
+        };
+        /** @description The generation failed. Nothing from the reply was persisted. */
+        MessageErrorEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.error";
+            error: components["schemas"]["ErrorDetail"];
+        };
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
         };
         ErrorDetail: {
-            /** @description Stable machine-readable error code: VALIDATION_ERROR, NOT_FOUND, UNAUTHENTICATED, INVALID_CREDENTIALS. */
+            /** @description Stable machine-readable error code: VALIDATION_ERROR, NOT_FOUND, UNAUTHENTICATED, INVALID_CREDENTIALS, LLM_PROVIDER_ERROR, INTERNAL_ERROR. */
             code: string;
             message: string;
             details?: unknown | null;
@@ -408,6 +471,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessagePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["ConversationNotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    sendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Server-Sent Events stream. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
                 };
             };
             401: components["responses"]["Unauthenticated"];
