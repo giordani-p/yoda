@@ -5,6 +5,84 @@
 
 body {
     margin: 0 auto;
-    max-width: 960px;
+    max-width: 1200px;
     padding: 16px;
+}
+
+.app-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.user-menu {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.login {
+    margin: 64px auto;
+    max-width: 320px;
+}
+
+.login form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.conversations-layout {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: 260px 1fr;
+}
+
+.conversation-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.conversation-list li {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.conversation-list a.active {
+    font-weight: bold;
+}
+
+.messages {
+    list-style: none;
+    padding: 0;
+}
+
+.message-text {
+    margin-top: 4px;
+    white-space: pre-wrap;
+}
+
+.message-markdown pre {
+    overflow-x: auto;
+}
+
+.composer {
+    align-items: flex-end;
+    display: flex;
+    gap: 8px;
+}
+
+.composer textarea {
+    flex: 1;
+    font: inherit;
+}
+
+.visually-hidden {
+    clip: rect(0 0 0 0);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    width: 1px;
 }

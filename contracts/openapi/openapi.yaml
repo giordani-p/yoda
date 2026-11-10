@@ -5,113 +5,416 @@ info:
   description: Source of truth for the HTTP API. Change this file before changing the code.
 
 paths:
-  /api/v1/examples:
-    get:
-      tags: [examples]
-      operationId: listExamples
-      summary: List examples
-      responses:
-        "200":
-          description: Examples found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExampleList"
+  /api/v1/auth/login:
     post:
-      tags: [examples]
-      operationId: createExample
-      summary: Create an example
+      tags: [auth]
+      operationId: login
+      summary: Authenticate and start a session
+      description: On success, sets the `yoda_session` HttpOnly cookie with a signed token.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ExampleCreate"
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        "201":
-          description: Example created.
-          content:
-            application/json:
+        "204":
+          description: Authenticated. The session cookie is set.
+          headers:
+            Set-Cookie:
               schema:
-                $ref: "#/components/schemas/Example"
-        "422":
-          description: Invalid request.
+                type: string
+        "401":
+          description: Invalid email or password (code INVALID_CREDENTIALS).
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
-  /api/v1/examples/{exampleId}:
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: End the session
+      description: Clears the session cookie. Succeeds even without a valid session.
+      responses:
+        "204":
+          description: Session cookie cleared.
+
+  /api/v1/users/me:
     get:
-      tags: [examples]
-      operationId: getExample
-      summary: Get an example by id
-      parameters:
-        - name: exampleId
-          in: path
-          required: true
-          schema:
-            type: integer
+      tags: [users]
+      operationId: getCurrentUser
+      summary: Get the authenticated user
+      security:
+        - sessionCookie: []
       responses:
         "200":
-          description: Example found.
+          description: Authenticated user.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Example"
-        "404":
-          description: Example not found.
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /api/v1/conversations:
+    post:
+      tags: [conversations]
+      operationId: createConversation
+      summary: Create an empty conversation
+      description: The title is filled from the first message sent to the conversation.
+      security:
+        - sessionCookie: []
+      responses:
+        "201":
+          description: Conversation created.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    get:
+      tags: [conversations]
+      operationId: listConversations
+      summary: List conversations, most recently updated first
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of conversations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
         "422":
-          description: Invalid request.
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/conversations/{conversationId}:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    get:
+      tags: [conversations]
+      operationId: getConversation
+      summary: Get a conversation
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Conversation found.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    delete:
+      tags: [conversations]
+      operationId: deleteConversation
+      summary: Delete a conversation
+      description: Soft delete. The conversation stops being listed and returns 404 everywhere.
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Conversation deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/conversations/{conversationId}/messages:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    get:
+      tags: [conversations]
+      operationId: listMessages
+      summary: List messages of a conversation
+      description: >
+        Returns the most recent messages in chronological order. `nextCursor` points to older
+        messages; pass it as `cursor` to load the previous page.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: A page of messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagePage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /api/v1/conversations/{conversationId}/messages/stream:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    post:
+      tags: [assistant]
+      operationId: sendMessage
+      summary: Send a message and stream the assistant reply (SSE)
+      description: >
+        Errors before the stream starts (401, 404, 422) are regular JSON responses. Once the
+        stream starts, each event's `data` is a JSON `MessageStreamEvent`, in this order:
+        `message.user`, zero or more `message.delta`, then `message.completed` or
+        `message.error`. The assistant reply is persisted only when completed; if the client
+        disconnects or the generation fails, the partial reply is discarded and the user message
+        is kept.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "200":
+          description: Server-Sent Events stream.
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: string
+                    contentMediaType: application/json
+                    contentSchema:
+                      $ref: "#/components/schemas/MessageStreamEvent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/ConversationNotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: yoda_session
+
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor returned as `nextCursor` by the previous page.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    Unauthenticated:
+      description: Missing, invalid or expired session (code UNAUTHENTICATED).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ConversationNotFound:
+      description: Conversation not found, deleted or owned by another user (code NOT_FOUND).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Invalid request (code VALIDATION_ERROR).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
   schemas:
-    ExampleCreate:
+    LoginRequest:
       type: object
-      required: [name]
+      required: [email, password]
       properties:
-        name:
+        email:
           type: string
           minLength: 1
-          maxLength: 100
-        description:
-          anyOf:
-            - type: string
-              maxLength: 500
-            - type: "null"
+          maxLength: 320
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
 
-    Example:
+    User:
       type: object
-      required: [id, name, description, createdAt]
+      required: [id, email, name]
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
+        email:
+          type: string
         name:
           type: string
-        description:
+
+    Conversation:
+      type: object
+      required: [id, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          description: First ~60 characters of the first message; null until a message is sent.
           anyOf:
             - type: string
             - type: "null"
         createdAt:
           type: string
           format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
-    ExampleList:
+    ConversationPage:
       type: object
-      required: [items]
+      required: [items, nextCursor]
       properties:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/Example"
+            $ref: "#/components/schemas/Conversation"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+
+    Message:
+      type: object
+      required: [id, role, content, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessagePage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+
+    SendMessageRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Must contain at least one non-whitespace character.
+
+    MessageStreamEvent:
+      oneOf:
+        - $ref: "#/components/schemas/UserMessageEvent"
+        - $ref: "#/components/schemas/MessageDeltaEvent"
+        - $ref: "#/components/schemas/MessageCompletedEvent"
+        - $ref: "#/components/schemas/MessageErrorEvent"
+      discriminator:
+        propertyName: type
+        mapping:
+          message.user: "#/components/schemas/UserMessageEvent"
+          message.delta: "#/components/schemas/MessageDeltaEvent"
+          message.completed: "#/components/schemas/MessageCompletedEvent"
+          message.error: "#/components/schemas/MessageErrorEvent"
+
+    UserMessageEvent:
+      type: object
+      description: The user message was persisted.
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          const: message.user
+        message:
+          $ref: "#/components/schemas/Message"
+
+    MessageDeltaEvent:
+      type: object
+      description: A fragment of the assistant reply.
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: message.delta
+        text:
+          type: string
+
+    MessageCompletedEvent:
+      type: object
+      description: The assistant reply finished and was persisted.
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          const: message.completed
+        message:
+          $ref: "#/components/schemas/Message"
+
+    MessageErrorEvent:
+      type: object
+      description: The generation failed. Nothing from the reply was persisted.
+      required: [type, error]
+      properties:
+        type:
+          type: string
+          const: message.error
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
 
     ErrorResponse:
       type: object
@@ -126,7 +429,9 @@ components:
       properties:
         code:
           type: string
-          description: Stable machine-readable error code, e.g. NOT_FOUND, VALIDATION_ERROR.
+          description: >
+            Stable machine-readable error code: VALIDATION_ERROR, NOT_FOUND, UNAUTHENTICATED,
+            INVALID_CREDENTIALS, LLM_PROVIDER_ERROR, INTERNAL_ERROR.
         message:
           type: string
         details:

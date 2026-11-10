@@ -75,19 +75,25 @@ Regras de domínio:
 - Server-Sent Events (SSE), com tipos de evento padronizados que diferenciam conteúdo, conclusão
   e erro.
 - Persistir apenas a mensagem final consolidada, não cada fragmento.
-- O protocolo SSE é documentado separadamente do OpenAPI.
+- Detalhes em [ADR 0007](decisions/0007-streaming-protocol.md).
+- Os eventos SSE fazem parte do contrato OpenAPI: o `data` de cada evento é um
+  `MessageStreamEvent` (união discriminada pelo campo `type`), publicado pelo SSE nativo do
+  FastAPI e gerado como tipo no frontend. A ordem dos eventos e o comportamento em falha ficam na
+  descrição da operação.
 
 ### LLM Gateway
 
-O acesso à OpenAI fica isolado em uma integração (`LLMProvider`, em `assistant`), que encapsula o
-SDK oficial, centraliza a escolha do modelo, timeouts, erros, streaming, metadados operacionais e
+O acesso à OpenAI fica isolado em uma integração (`LLMProvider`, em `assistant`;
+[ADR 0008](decisions/0008-llm-gateway.md)), que encapsula o SDK oficial, centraliza a escolha do modelo, timeouts, erros, streaming, metadados operacionais e
 uso de tokens. Nenhum outro ponto do código chama a OpenAI. A interface reflete os casos de uso
 reais, sem abstração genérica excessiva.
 
 ### Segurança e privacidade
 
 - Segredos em variáveis de ambiente; `.env` fora do versionamento.
-- Autenticação e autorização no backend; isolamento de dados por usuário.
+- Autenticação no backend por JWT em cookie HttpOnly, verificado em `app/shared/security/`
+  ([ADR 0006](decisions/0006-authentication.md)); usuários criados só pelo terminal.
+- Isolamento de dados por usuário: rotas protegidas recebem o `user_id` por `CurrentUserId`.
 - Validação de entrada e limite de tamanho das mensagens.
 - Erros sem informações internas; logs sem conteúdo sensível desnecessário.
 - Mensagens e contexto são enviados à OpenAI: a aplicação não deve afirmar que todo o
@@ -168,7 +174,7 @@ modules/<nome>/
 Estrutura plana, com a ordem `router` → `service` → `repository` → `models` verificada pelo
 `import-linter` (ADR 0002). Interfaces explícitas (`Protocol`) só onde há integração externa ou
 ponto de extensão: `LLMProvider` em `assistant` e `ContextProvider` em `context`. Não aplicar DDD
-tático sem um problema real que o justifique. `modules/example/` é a referência até o P1.
+tático sem um problema real que o justifique. `modules/conversations/` serve de referência.
 
 
 ### Banco de dados
@@ -176,7 +182,8 @@ tático sem um problema real que o justifique. `modules/example/` é a referênc
 - PostgreSQL com SQLAlchemy 2 **assíncrono** (`AsyncSession`, driver psycopg 3) na aplicação
   (ADR 0005). O Alembic roda em modo síncrono com a mesma `DATABASE_URL`.
 - Uma única árvore de migrations; o Alembic carrega o `models.py` de todos os módulos.
-- Os testes usam SQLite em memória (aiosqlite); reavaliar no P1.
+- Os testes usam um banco Postgres de teste (`TEST_DATABASE_URL`), criado automaticamente; cada
+  teste roda numa transação desfeita ao final.
 
 ### Health check
 

@@ -39,6 +39,18 @@ class NotFoundError(AppError):
     code = "NOT_FOUND"
 
 
+class InvalidRequestError(AppError):
+    """Entrada inválida detectada fora da validação automática do FastAPI."""
+
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    code = "VALIDATION_ERROR"
+
+
+class UnauthenticatedError(AppError):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "UNAUTHENTICATED"
+
+
 def _error_response(status_code: int, code: str, message: str, details: Any = None) -> JSONResponse:
     body = ErrorResponse(error=ErrorDetail(code=code, message=message, details=details))
     return JSONResponse(status_code=status_code, content=jsonable_encoder(body))
@@ -53,7 +65,8 @@ async def _handle_validation_error(_: Request, exc: RequestValidationError) -> J
         status.HTTP_422_UNPROCESSABLE_CONTENT,
         "VALIDATION_ERROR",
         "Invalid request.",
-        exc.errors(),
+        # Validadores próprios incluem a exceção original em `ctx`; ela vira texto no JSON.
+        jsonable_encoder(exc.errors(), custom_encoder={Exception: str}),
     )
 
 

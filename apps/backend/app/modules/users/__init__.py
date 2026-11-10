@@ -2,3 +2,7 @@
 
 Interface pública: somente o que é exportado aqui pode ser usado fora do módulo.
 """
+
+from app.modules.users.router import router
+
+__all__ = ["router"]

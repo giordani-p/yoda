@@ -4,35 +4,145 @@
  */
 
 export interface paths {
-    "/api/v1/examples": {
+    "/api/v1/auth/login": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List examples */
-        get: operations["listExamples"];
+        get?: never;
         put?: never;
-        /** Create an example */
-        post: operations["createExample"];
+        /**
+         * Authenticate and start a session
+         * @description On success, sets the `yoda_session` HttpOnly cookie with a signed token.
+         */
+        post: operations["login"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/examples/{exampleId}": {
+    "/api/v1/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get an example by id */
-        get: operations["getExample"];
+        get?: never;
+        put?: never;
+        /**
+         * End the session
+         * @description Clears the session cookie. Succeeds even without a valid session.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the authenticated user */
+        get: operations["getCurrentUser"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List conversations, most recently updated first */
+        get: operations["listConversations"];
+        put?: never;
+        /**
+         * Create an empty conversation
+         * @description The title is filled from the first message sent to the conversation.
+         */
+        post: operations["createConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        /** Get a conversation */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a conversation
+         * @description Soft delete. The conversation stops being listed and returns 404 everywhere.
+         */
+        delete: operations["deleteConversation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List messages of a conversation
+         * @description Returns the most recent messages in chronological order. `nextCursor` points to older messages; pass it as `cursor` to load the previous page.
+         */
+        get: operations["listMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversationId}/messages/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a message and stream the assistant reply (SSE)
+         * @description Errors before the stream starts (401, 404, 422) are regular JSON responses. Once the stream starts, each event's `data` is a JSON `MessageStreamEvent`, in this order: `message.user`, zero or more `message.delta`, then `message.completed` or `message.error`. The assistant reply is persisted only when completed; if the client disconnects or the generation fails, the partial reply is discarded and the user message is kept.
+         */
+        post: operations["sendMessage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -43,59 +153,136 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        ExampleCreate: {
-            name: string;
-            description?: string | null;
+        LoginRequest: {
+            email: string;
+            password: string;
         };
-        Example: {
-            id: number;
+        User: {
+            /** Format: uuid */
+            id: string;
+            email: string;
             name: string;
-            description: string | null;
+        };
+        Conversation: {
+            /** Format: uuid */
+            id: string;
+            /** @description First ~60 characters of the first message; null until a message is sent. */
+            title: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ConversationPage: {
+            items: components["schemas"]["Conversation"][];
+            nextCursor: string | null;
+        };
+        Message: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            role: "user" | "assistant";
+            content: string;
             /** Format: date-time */
             createdAt: string;
         };
-        ExampleList: {
-            items: components["schemas"]["Example"][];
+        MessagePage: {
+            items: components["schemas"]["Message"][];
+            nextCursor: string | null;
+        };
+        SendMessageRequest: {
+            /** @description Must contain at least one non-whitespace character. */
+            content: string;
+        };
+        MessageStreamEvent: components["schemas"]["UserMessageEvent"] | components["schemas"]["MessageDeltaEvent"] | components["schemas"]["MessageCompletedEvent"] | components["schemas"]["MessageErrorEvent"];
+        /** @description The user message was persisted. */
+        UserMessageEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.user";
+            message: components["schemas"]["Message"];
+        };
+        /** @description A fragment of the assistant reply. */
+        MessageDeltaEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.delta";
+            text: string;
+        };
+        /** @description The assistant reply finished and was persisted. */
+        MessageCompletedEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.completed";
+            message: components["schemas"]["Message"];
+        };
+        /** @description The generation failed. Nothing from the reply was persisted. */
+        MessageErrorEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "message.error";
+            error: components["schemas"]["ErrorDetail"];
         };
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
         };
         ErrorDetail: {
-            /** @description Stable machine-readable error code, e.g. NOT_FOUND, VALIDATION_ERROR. */
+            /** @description Stable machine-readable error code: VALIDATION_ERROR, NOT_FOUND, UNAUTHENTICATED, INVALID_CREDENTIALS, LLM_PROVIDER_ERROR, INTERNAL_ERROR. */
             code: string;
             message: string;
             details?: unknown | null;
         };
     };
-    responses: never;
-    parameters: never;
+    responses: {
+        /** @description Missing, invalid or expired session (code UNAUTHENTICATED). */
+        Unauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Conversation not found, deleted or owned by another user (code NOT_FOUND). */
+        ConversationNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Invalid request (code VALIDATION_ERROR). */
+        ValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+    };
+    parameters: {
+        ConversationId: string;
+        /** @description Opaque cursor returned as `nextCursor` by the previous page. */
+        Cursor: string;
+        Limit: number;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    listExamples: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Examples found. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExampleList"];
-                };
-            };
-        };
-    };
-    createExample: {
+    login: {
         parameters: {
             query?: never;
             header?: never;
@@ -104,21 +291,20 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExampleCreate"];
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
-            /** @description Example created. */
-            201: {
+            /** @description Authenticated. The session cookie is set. */
+            204: {
                 headers: {
+                    "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Example"];
-                };
+                content?: never;
             };
-            /** @description Invalid request. */
-            422: {
+            /** @description Invalid email or password (code INVALID_CREDENTIALS). */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -126,46 +312,199 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            422: components["responses"]["ValidationError"];
         };
     };
-    getExample: {
+    logout: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                exampleId: number;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Example found. */
+            /** @description Session cookie cleared. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authenticated user. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Example"];
+                    "application/json": components["schemas"]["User"];
                 };
             };
-            /** @description Example not found. */
-            404: {
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as `nextCursor` by the previous page. */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of conversations. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["ConversationPage"];
                 };
             };
-            /** @description Invalid request. */
-            422: {
+            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    createConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation created. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
+                    "application/json": components["schemas"]["Conversation"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation found. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["ConversationNotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["ConversationNotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listMessages: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as `nextCursor` by the previous page. */
+                cursor?: components["parameters"]["Cursor"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["ConversationNotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    sendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversationId: components["parameters"]["ConversationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Server-Sent Events stream. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["ConversationNotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
 }

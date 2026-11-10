@@ -1,5 +1,5 @@
 .PHONY: help setup install up down restart logs ps build clean \
-	db dev-backend dev-frontend test lint format migrate migration \
+	db dev-backend dev-frontend test lint format migrate migration create-user \
 	generate-client contract-check
 
 BACKEND := cd apps/backend &&
@@ -27,9 +27,10 @@ help:
 	@echo "  make dev-frontend     - Run frontend with reload"
 	@echo "  make migrate          - Apply database migrations"
 	@echo "  make migration name=x - Create a migration from model changes"
+	@echo "  make create-user      - Create a user (interactive)"
 	@echo ""
 	@echo "Quality"
-	@echo "  make test             - Run all tests"
+	@echo "  make test             - Run all tests (starts the database if needed)"
 	@echo "  make lint             - Run all linters and type checks"
 	@echo "  make format           - Format all code"
 	@echo ""
@@ -67,7 +68,7 @@ clean:
 	docker compose down -v --remove-orphans
 
 db:
-	docker compose up -d db
+	docker compose up -d --wait db
 
 dev-backend:
 	$(BACKEND) uv run uvicorn app.main:app --reload
@@ -82,7 +83,7 @@ migration:
 	@test -n "$(name)" || (echo "Usage: make migration name=describe_change" && exit 1)
 	$(BACKEND) uv run alembic revision --autogenerate -m "$(name)"
 
-test:
+test: db
 	$(BACKEND) uv run pytest
 	$(FRONTEND) pnpm test
 
@@ -93,6 +94,9 @@ lint:
 format:
 	$(BACKEND) uv run ruff check --fix . && uv run ruff format .
 	$(FRONTEND) pnpm format
+
+create-user:
+	$(BACKEND) uv run python -m app.modules.users.cli
 
 generate-client:
 	$(FRONTEND) pnpm generate
