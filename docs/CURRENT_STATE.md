@@ -1,9 +1,9 @@
 # Estado atual
 
-Fase concluída: **P0 — Foundation** ([phases/p0.md](phases/p0.md)). Em andamento: **P1 —
-Conversational Experience** ([phases/p1.md](phases/p1.md)): autenticação, conversas e assistente
-com streaming entregues; falta o fechamento da fase (teste ponta a ponta com a OpenAI). Atualize este documento a cada
-entrega que mude o que está implementado.
+Fases concluídas: **P0 — Foundation** ([phases/p0.md](phases/p0.md)) e **P1 — Conversational
+Experience** ([phases/p1.md](phases/p1.md)), esta validada de ponta a ponta com a OpenAI em
+10/11/2026. Próxima fase: P2 — Context Management (ainda sem especificação). Atualize este
+documento a cada entrega que mude o que está implementado.
 
 ## Backend
 
