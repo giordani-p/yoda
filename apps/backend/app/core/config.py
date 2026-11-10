@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:5173"]
 
-    database_url: str = "postgresql+psycopg://app:change-me@localhost:5432/app"
+    database_url: str = "postgresql+psycopg://yoda:change-me@localhost:5432/yoda"
 
     auth_secret_key: str = DEV_AUTH_SECRET_KEY
     auth_token_ttl_hours: int = 168

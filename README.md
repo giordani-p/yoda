@@ -74,7 +74,7 @@ O CI falha se o backend divergir do contrato ou se o client gerado estiver desat
 
 ## Criando um novo módulo
 
-Os módulos do produto já existem como esqueletos. Para criar um novo (ou preencher um existente):
+Para criar um novo módulo:
 
 1. Descreva os endpoints e schemas no contrato.
 2. Siga `apps/backend/app/modules/conversations/` como referência (`router.py`, `schemas.py`, `service.py`, `repository.py`, `models.py`).
