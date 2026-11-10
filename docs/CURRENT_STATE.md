@@ -9,7 +9,9 @@ documento a cada entrega que mude o que está implementado.
 
 - FastAPI com configuração por variáveis de ambiente, logging, CORS e envelope de erro padrão.
 - Postgres via SQLAlchemy 2 **assíncrono** (`AsyncSession`, psycopg 3) e Alembic (síncrono), com
-  uma migration inicial.
+  as migrations `create users table` e `create conversations and messages tables`.
+- Banco e usuário do Postgres se chamam `yoda` (`yoda_test` nos testes). Versão da aplicação e do
+  contrato: `1.0.0`.
 - Módulo `users`: tabela `users` (id UUID, e-mail único, nome, hash argon2), login
   (`POST /api/v1/auth/login`), logout (`POST /api/v1/auth/logout`) e usuário autenticado
   (`GET /api/v1/users/me`). Usuários são criados só pelo terminal (`make create-user`).

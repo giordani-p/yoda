@@ -23,7 +23,7 @@ class DatabaseTestSettings(BaseSettings):
     # Mesmo .env da aplicação, relativo a apps/backend (onde o pytest roda).
     model_config = SettingsConfigDict(env_file="../../.env", extra="ignore")
 
-    test_database_url: str = "postgresql+psycopg://app:change-me@localhost:5432/app_test"
+    test_database_url: str = "postgresql+psycopg://yoda:change-me@localhost:5432/yoda_test"
 
 
 async def _create_database_if_missing(url: str) -> None:
